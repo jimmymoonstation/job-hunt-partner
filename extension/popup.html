@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Hunt Partner</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Header -->
+    <header>
+      <span class="logo">Job Hunt Partner</span>
+      <button id="btn-settings" class="icon-btn" title="Settings">⚙</button>
+    </header>
+
+    <!-- Settings panel (hidden by default) -->
+    <div id="settings-panel" class="hidden">
+      <label>Server URL</label>
+      <input id="server-url" type="text" placeholder="http://143.198.134.85" />
+      <button id="btn-save-settings" class="btn-primary btn-sm">Save</button>
+    </div>
+
+    <!-- Main -->
+    <div id="main">
+      <div id="url-bar">
+        <span id="current-url" class="url-text">Loading current tab…</span>
+      </div>
+
+      <button id="btn-analyze" class="btn-primary btn-full">Analyze This Job</button>
+
+      <!-- Loading -->
+      <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p id="loading-msg">Fetching job page…</p>
+      </div>
+
+      <!-- Error -->
+      <div id="error-box" class="hidden">
+        <p id="error-msg"></p>
+      </div>
+
+      <!-- Results -->
+      <div id="results" class="hidden">
+
+        <div class="result-header">
+          <div>
+            <div id="res-title" class="res-title"></div>
+            <div id="res-company" class="res-company"></div>
+          </div>
+          <div id="fit-score" class="fit-badge">—</div>
+        </div>
+
+        <div id="res-summary" class="res-summary"></div>
+
+        <div class="section">
+          <div class="section-label green">✓ You bring</div>
+          <ul id="res-strengths"></ul>
+        </div>
+
+        <div class="section" id="gaps-section">
+          <div class="section-label red">△ Gaps / watch out</div>
+          <ul id="res-gaps"></ul>
+        </div>
+
+        <div class="section">
+          <div class="section-label blue">✍ Cover letter bullets</div>
+          <ul id="res-bullets" class="bullets"></ul>
+        </div>
+
+        <div class="action-row">
+          <button id="btn-save-board" class="btn-primary btn-sm">Save to Board</button>
+          <button id="btn-apply-now" class="btn-secondary btn-sm">Open Job →</button>
+          <span id="save-msg" class="save-msg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -37,6 +37,7 @@
       <input id="search-q" type="text" placeholder="Search title or company…" />
       <input id="search-loc" type="text" placeholder="Location…" />
       <button id="btn-refresh" class="btn-primary">Refresh</button>
+      <button id="btn-add-job" class="btn-secondary">+ Add Job Manually</button>
       <button id="btn-scrape" class="btn-secondary">Run Scraper Now</button>
       <span id="scraper-status"></span>
     </div>
@@ -129,6 +130,30 @@
       </tbody>
     </table>
   </section>
+
+  <!-- Add Job Modal -->
+  <div id="add-job-overlay" class="hidden">
+    <div id="add-job-modal">
+      <h3>Add Job Manually</h3>
+      <label>Job Title <span style="color:var(--red)">*</span></label>
+      <input id="aj-title" type="text" placeholder="Senior Software Engineer" />
+      <label>Company <span style="color:var(--red)">*</span></label>
+      <input id="aj-company" type="text" placeholder="Acme Corp" />
+      <label>Job Posting URL <span style="color:var(--red)">*</span></label>
+      <input id="aj-url" type="url" placeholder="https://careers.acme.com/jobs/12345" />
+      <label>Location</label>
+      <input id="aj-location" type="text" placeholder="San Francisco, CA / Remote" />
+      <label>Level</label>
+      <input id="aj-level" type="text" placeholder="Senior / L5 / Staff" />
+      <label>Notes / Description</label>
+      <textarea id="aj-description" rows="3" placeholder="Anything you want to remember about this role…"></textarea>
+      <div class="modal-actions">
+        <button id="aj-confirm" class="btn-primary">Add Job</button>
+        <button id="aj-cancel" class="btn-secondary">Cancel</button>
+      </div>
+      <p id="aj-error" style="color:var(--red);font-size:12px;margin-top:8px"></p>
+    </div>
+  </div>
 
   <!-- Apply Modal -->
   <div id="modal-overlay" class="hidden">

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api.database import init_db
-from src.api.routes import applications, config, discord_history, jobs, resumes, scraper, stats
+from src.api.routes import analyze, applications, config, discord_history, jobs, resumes, scraper, stats
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ app.add_middleware(
 )
 
 # API routes
-for router in [jobs.router, applications.router, resumes.router, config.router, stats.router, scraper.router, discord_history.router]:
+for router in [jobs.router, applications.router, resumes.router, config.router, stats.router, scraper.router, discord_history.router, analyze.router]:
     app.include_router(router, prefix="/api")
 
 # Health check

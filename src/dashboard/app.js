@@ -33,6 +33,9 @@ function setupTabs() {
     });
   });
 
+  document.getElementById('btn-add-job').addEventListener('click', openAddJobModal);
+  document.getElementById('aj-cancel').addEventListener('click', closeAddJobModal);
+  document.getElementById('aj-confirm').addEventListener('click', confirmAddJob);
   document.getElementById('btn-refresh').addEventListener('click', () => loadJobs());
   document.getElementById('btn-scrape').addEventListener('click', triggerScrape);
   document.getElementById('search-q').addEventListener('input', debounce(() => loadJobs(), 400));
@@ -113,6 +116,61 @@ function renderPagination(total, limit, page) {
 }
 
 function changePage(p) { currentJobPage = p; loadJobs(); }
+
+// ── Add Job Modal ─────────────────────────────────────────────────────────────
+
+function openAddJobModal() {
+  ['aj-title','aj-company','aj-url','aj-location','aj-level','aj-description'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('aj-error').textContent = '';
+  document.getElementById('add-job-overlay').classList.remove('hidden');
+  document.getElementById('aj-title').focus();
+}
+
+function closeAddJobModal() {
+  document.getElementById('add-job-overlay').classList.add('hidden');
+}
+
+async function confirmAddJob() {
+  const title = document.getElementById('aj-title').value.trim();
+  const company = document.getElementById('aj-company').value.trim();
+  const url = document.getElementById('aj-url').value.trim();
+  const errEl = document.getElementById('aj-error');
+
+  if (!title || !company || !url) {
+    errEl.textContent = 'Job title, company, and URL are required.';
+    return;
+  }
+
+  const body = {
+    job_title: title,
+    company_name: company,
+    url,
+    location: document.getElementById('aj-location').value.trim() || null,
+    level: document.getElementById('aj-level').value.trim() || null,
+    description: document.getElementById('aj-description').value.trim() || null,
+  };
+
+  const res = await fetch(API + '/jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 409) {
+    errEl.textContent = 'This job is already in your board.';
+    return;
+  }
+  if (!res.ok) {
+    errEl.textContent = 'Something went wrong. Try again.';
+    return;
+  }
+
+  closeAddJobModal();
+  loadJobs();
+  loadStats();
+}
 
 // ── Apply Modal ───────────────────────────────────────────────────────────────
 
