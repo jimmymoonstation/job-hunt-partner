@@ -1,0 +1,15 @@
+[Unit]
+Description=Job Hunt Partner API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/job-hunt-partner
+EnvironmentFile=/opt/job-hunt-partner/.env
+ExecStart=/usr/bin/python3 -m uvicorn src.api.main:app --host 127.0.0.1 --port 5057
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

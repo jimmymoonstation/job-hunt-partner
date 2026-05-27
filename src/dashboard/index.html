@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Hunt Partner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Job Hunt Partner</h1>
+      <div id="countdown"></div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-tab="board">Job Board</button>
+    <button class="tab" data-tab="tracker">My Applications</button>
+    <button class="tab" data-tab="config">Search Config</button>
+    <button class="tab" data-tab="resumes">Resumes</button>
+  </nav>
+
+  <!-- Stats bar -->
+  <section id="stats-bar">
+    <div class="stat"><span id="stat-discovered">—</span><label>Jobs Found</label></div>
+    <div class="stat"><span id="stat-applied">—</span><label>Applied</label></div>
+    <div class="stat"><span id="stat-screening">—</span><label>Screening</label></div>
+    <div class="stat"><span id="stat-interview">—</span><label>Interview</label></div>
+    <div class="stat"><span id="stat-offer">—</span><label>Offers</label></div>
+    <div class="stat"><span id="stat-daily">—</span><label>Avg/Day</label></div>
+  </section>
+
+  <!-- Job Board -->
+  <section id="tab-board" class="tab-content active">
+    <div class="toolbar">
+      <input id="search-q" type="text" placeholder="Search title or company…" />
+      <input id="search-loc" type="text" placeholder="Location…" />
+      <button id="btn-refresh" class="btn-primary">Refresh</button>
+      <button id="btn-scrape" class="btn-secondary">Run Scraper Now</button>
+      <span id="scraper-status"></span>
+    </div>
+    <table id="jobs-table">
+      <thead>
+        <tr>
+          <th>Job Title</th>
+          <th>Company</th>
+          <th>Location</th>
+          <th>Level</th>
+          <th>Source</th>
+          <th>Found</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-body">
+        <tr><td colspan="7" class="loading">Loading…</td></tr>
+      </tbody>
+    </table>
+    <div id="jobs-pagination"></div>
+  </section>
+
+  <!-- Application Tracker -->
+  <section id="tab-tracker" class="tab-content">
+    <div class="toolbar">
+      <select id="filter-status">
+        <option value="">All Statuses</option>
+        <option value="saved">Saved</option>
+        <option value="applied">Applied</option>
+        <option value="phone_screen">Phone Screen</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+    <table id="apps-table">
+      <thead>
+        <tr>
+          <th>Job Title</th>
+          <th>Company</th>
+          <th>Applied</th>
+          <th>Status</th>
+          <th>Resume</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="apps-body">
+        <tr><td colspan="7" class="loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Search Config -->
+  <section id="tab-config" class="tab-content">
+    <div class="config-form">
+      <h2>Search Preferences</h2>
+      <p>Separate multiple values with commas.</p>
+      <label>Job Titles <small>(e.g. Software Engineer, Backend Engineer)</small></label>
+      <input id="cfg-titles" type="text" placeholder="Software Engineer, Backend Engineer" />
+
+      <label>Locations <small>(e.g. San Francisco, Remote, New York)</small></label>
+      <input id="cfg-locations" type="text" placeholder="San Francisco, Remote" />
+
+      <label>Levels <small>(e.g. Senior, Staff, L5)</small></label>
+      <input id="cfg-levels" type="text" placeholder="Senior, Staff" />
+
+      <label>Keywords <small>(additional search terms)</small></label>
+      <input id="cfg-keywords" type="text" placeholder="distributed systems, Python" />
+
+      <label>Excluded Companies</label>
+      <input id="cfg-excluded" type="text" placeholder="Company X, Company Y" />
+
+      <button id="btn-save-config" class="btn-primary">Save & Start Searching</button>
+      <span id="config-msg"></span>
+    </div>
+  </section>
+
+  <!-- Resumes -->
+  <section id="tab-resumes" class="tab-content">
+    <div class="toolbar">
+      <button id="btn-add-resume" class="btn-primary">+ Add Resume Version</button>
+    </div>
+    <table id="resumes-table">
+      <thead>
+        <tr><th>Name</th><th>Version</th><th>Tags</th><th>Created</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="resumes-body">
+        <tr><td colspan="5" class="loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Apply Modal -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal">
+      <h3 id="modal-title">Apply to Job</h3>
+      <label>Resume version</label>
+      <select id="modal-resume"></select>
+      <label>Notes</label>
+      <textarea id="modal-notes" rows="3" placeholder="Where did you find it? Any contacts?"></textarea>
+      <div class="modal-actions">
+        <button id="modal-confirm" class="btn-primary">Confirm Apply</button>
+        <button id="modal-cancel" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Update Modal -->
+  <div id="status-modal-overlay" class="hidden">
+    <div id="status-modal">
+      <h3>Update Status</h3>
+      <select id="status-modal-select">
+        <option value="applied">Applied</option>
+        <option value="phone_screen">Phone Screen</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+        <option value="withdrawn">Withdrawn</option>
+      </select>
+      <label>Notes</label>
+      <input id="status-modal-notes" type="text" placeholder="Optional note…" />
+      <div class="modal-actions">
+        <button id="status-modal-confirm" class="btn-primary">Update</button>
+        <button id="status-modal-cancel" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
