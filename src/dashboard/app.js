@@ -95,7 +95,7 @@ async function loadJobs(showLoading = true) {
       <td>${j.location ? esc(j.location) : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td>${j.level ? `<span class="badge badge-new">${esc(j.level)}</span>` : '—'}</td>
       <td><span class="source-chip">${esc(j.source.split(':')[0])}</span></td>
-      <td style="color:var(--text-dim);font-size:12px">${timeAgo(j.discovered_at)}</td>
+      <td style="color:var(--text-dim);font-size:12px">${formatPostedDate(j.posted_at, j.discovered_at)}</td>
       <td>
         <button class="btn-primary btn-sm" onclick="openApplyModal(${j.id})">Apply</button>
         <button class="btn-secondary btn-sm" style="margin-left:4px" onclick="saveJob(${j.id})">Save</button>
@@ -386,12 +386,26 @@ function formatDate(iso) {
 }
 
 function timeAgo(iso) {
+  if (!iso) return '—';
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatPostedDate(posted_at, discovered_at) {
+  const dt = posted_at || discovered_at;
+  if (!dt) return '—';
+  const label = posted_at ? 'posted' : 'found';
+  const exact = new Date(dt).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  });
+  return `<span title="${label} ${exact}">${timeAgo(dt)}</span>`;
 }
 
 function debounce(fn, delay) {

@@ -1,10 +1,13 @@
 import hashlib
+import logging
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from src.api.database import get_db
 from src.api.models import Job
@@ -93,7 +96,50 @@ def create_job(body: JobCreate, db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
     db.refresh(job)
+
+    # Learn the company's ATS from the URL so future scraper runs cover it
+    _maybe_register_company(db, body.company_name, body.url)
+
     return job
+
+
+def _maybe_register_company(db: Session, company_name: str, url: str):
+    """If the manually-added job URL reveals a known ATS, register the company for future scraping."""
+    from src.api.models import TrackedCompany
+    from src.scraper.career_pages import detect_ats_from_url, GREENHOUSE_COMPANIES, LEVER_COMPANIES, ASHBY_COMPANIES, WORKDAY_COMPANIES
+
+    try:
+        ats = detect_ats_from_url(url)
+        if not ats:
+            return
+        slug = ats["ats_slug"]
+
+        # Check if already covered by hardcoded lists
+        already_known = (
+            (ats["ats_type"] == "greenhouse" and slug in GREENHOUSE_COMPANIES) or
+            (ats["ats_type"] == "lever" and slug in LEVER_COMPANIES) or
+            (ats["ats_type"] == "ashby" and slug in ASHBY_COMPANIES) or
+            (ats["ats_type"] == "workday" and any(slug == t[0] for t in WORKDAY_COMPANIES))
+        )
+        if already_known:
+            return
+
+        # Check if already tracked in DB
+        existing = db.query(TrackedCompany).filter_by(ats_type=ats["ats_type"], ats_slug=slug).first()
+        if existing:
+            return
+
+        db.add(TrackedCompany(
+            company_name=company_name,
+            ats_type=ats["ats_type"],
+            ats_slug=slug,
+            workday_board=ats.get("workday_board"),
+            discovered_from="manual",
+        ))
+        db.commit()
+        logger.info(f"Learned new company: {company_name} ({ats['ats_type']}:{slug})")
+    except Exception as e:
+        logger.debug(f"Could not register company from URL {url}: {e}")
 
 
 @router.patch("/{job_id}")

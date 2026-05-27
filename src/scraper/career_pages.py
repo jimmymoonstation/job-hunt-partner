@@ -1,6 +1,8 @@
 """
 Direct scrapers for companies using common ATS platforms.
-Greenhouse, Lever, and Ashby expose clean JSON APIs — no HTML parsing needed.
+Greenhouse, Lever, Ashby expose clean JSON APIs.
+Workday uses a consistent POST JSON API.
+LinkedIn uses a semi-public guest search endpoint.
 """
 import logging
 import re
@@ -17,7 +19,8 @@ logger = logging.getLogger(__name__)
 GREENHOUSE_COMPANIES = [
     # Big tech / infra
     "stripe", "databricks", "datadog", "confluent", "hashicorp", "cloudflare",
-    "twilio", "sendgrid", "pagerduty", "newrelic",
+    "twilio", "sendgrid", "pagerduty", "newrelic", "github", "airbnb",
+    "box", "lyft", "doordash", "coinbase", "reddit", "pinterest",
     # Fintech
     "robinhood", "plaid", "chime", "affirm", "carta", "brex", "ramp",
     # AI / ML
@@ -25,7 +28,7 @@ GREENHOUSE_COMPANIES = [
     # Productivity / design
     "notion", "figma", "airtable", "asana", "dropbox", "canva",
     # Other
-    "openai", "lyft", "doordash", "coinbase", "reddit",
+    "openai", "waymo", "zendesk", "instacart",
 ]
 
 LEVER_COMPANIES = [
@@ -34,11 +37,11 @@ LEVER_COMPANIES = [
     "linear", "loom", "descript", "retool",
     "segment", "mixpanel", "amplitude", "heap",
     "benchling", "tempus", "devoted",
+    "palantir",
 ]
 
-# Ashby is widely used by YC and growth-stage startups
 ASHBY_COMPANIES = [
-    "openai",        # also on Ashby
+    "openai",
     "perplexity",
     "anduril",
     "benchling",
@@ -53,7 +56,6 @@ ASHBY_COMPANIES = [
     "gusto",
     "lattice",
     "coda",
-    "product-hunt",
     "fivetran",
     "airbyte",
     "census",
@@ -64,10 +66,29 @@ ASHBY_COMPANIES = [
     "elementary-data",
 ]
 
+# (tenant, board_path) — Workday URL = https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{board}/jobs
+WORKDAY_COMPANIES = [
+    ("salesforce",   "Salesforce",          "External_Career_Site"),
+    ("nvidia",       "NVIDIA",              "NVIDIAExternalCareerSite"),
+    ("adobe",        "Adobe",               "external_experienced"),
+    ("uber-temp",    "Uber",                "Uber_External_Careers"),
+    ("snowflake-ext","Snowflake",           "Snowflake_External_Career"),
+    ("zoom",         "Zoom",                "Zoom"),
+    ("okta",         "Okta",                "okta"),
+    ("linkedin",     "LinkedIn",            "careers"),
+    ("block",        "Block (Square)",      "External"),
+    ("twitch",       "Twitch",              "Careers"),
+    ("unity-technologies", "Unity",         "Jobs"),
+    ("pinterest",    "Pinterest",           "External"),
+    ("splunk",       "Splunk",              "External"),
+    ("workday",      "Workday",             "workday"),
+    ("intuit",       "Intuit",              "CareerSite"),
+    ("cisco",        "Cisco",               "Careers"),
+]
+
 
 # ── Level keywords for filtering ──────────────────────────────────────────────
 
-# Maps user-facing level terms → keywords to look for in job titles
 LEVEL_KEYWORDS = {
     "junior":      ["junior", "jr.", "jr ", "entry", "associate", "entry-level"],
     "new grad":    ["new grad", "university grad", "fresh grad", "early career",
@@ -86,30 +107,79 @@ LEVEL_KEYWORDS = {
 async def scrape_all(titles: list[str], locations: list[str], levels: list[str] = None) -> list[dict]:
     levels = levels or []
     results = []
+
+    # Load any companies the user has manually taught us about
+    db_companies = _load_db_companies()
+
     async with httpx.AsyncClient(timeout=15) as client:
-        for company in GREENHOUSE_COMPANIES:
+        # Greenhouse
+        gh_slugs = set(GREENHOUSE_COMPANIES) | {c["ats_slug"] for c in db_companies if c["ats_type"] == "greenhouse"}
+        for company in gh_slugs:
             try:
                 jobs = await _scrape_greenhouse(client, company, titles, locations, levels)
                 results.extend(jobs)
             except Exception as e:
                 logger.debug(f"Greenhouse {company}: {e}")
 
-        for company in LEVER_COMPANIES:
+        # Lever
+        lv_slugs = set(LEVER_COMPANIES) | {c["ats_slug"] for c in db_companies if c["ats_type"] == "lever"}
+        for company in lv_slugs:
             try:
                 jobs = await _scrape_lever(client, company, titles, locations, levels)
                 results.extend(jobs)
             except Exception as e:
                 logger.debug(f"Lever {company}: {e}")
 
-        for company in ASHBY_COMPANIES:
+        # Ashby
+        ab_slugs = set(ASHBY_COMPANIES) | {c["ats_slug"] for c in db_companies if c["ats_type"] == "ashby"}
+        for company in ab_slugs:
             try:
                 jobs = await _scrape_ashby(client, company, titles, locations, levels)
                 results.extend(jobs)
             except Exception as e:
                 logger.debug(f"Ashby {company}: {e}")
 
+        # Workday
+        wd_companies = list(WORKDAY_COMPANIES)
+        for c in db_companies:
+            if c["ats_type"] == "workday" and c.get("workday_board"):
+                wd_companies.append((c["ats_slug"], c["company_name"], c["workday_board"]))
+        for tenant, display_name, board in wd_companies:
+            try:
+                jobs = await _scrape_workday(client, tenant, display_name, board, titles, locations, levels)
+                results.extend(jobs)
+            except Exception as e:
+                logger.debug(f"Workday {tenant}: {e}")
+
+        # LinkedIn
+        try:
+            jobs = await _scrape_linkedin(client, titles, locations, levels)
+            results.extend(jobs)
+        except Exception as e:
+            logger.debug(f"LinkedIn: {e}")
+
     logger.info(f"Career pages: found {len(results)} matching jobs")
     return results
+
+
+def _load_db_companies() -> list[dict]:
+    try:
+        from src.api.database import SessionLocal
+        from src.api.models import TrackedCompany
+        with SessionLocal() as db:
+            rows = db.query(TrackedCompany).filter_by(is_active=True).all()
+            return [
+                {
+                    "company_name": r.company_name,
+                    "ats_type": r.ats_type,
+                    "ats_slug": r.ats_slug,
+                    "workday_board": r.workday_board,
+                }
+                for r in rows
+            ]
+    except Exception as e:
+        logger.debug(f"Could not load tracked companies from DB: {e}")
+        return []
 
 
 # ── Per-platform scrapers ─────────────────────────────────────────────────────
@@ -127,7 +197,6 @@ async def _scrape_greenhouse(client, company, titles, locations, levels):
         loc = job.get("location", {}).get("name", "")
         if not _matches_criteria(job.get("title", ""), loc, titles, locations, levels):
             continue
-        posted_at = _parse_iso(job.get("updated_at"))
         results.append({
             "company_job_id": str(job["id"]),
             "company_name": data.get("name", company.title()),
@@ -137,7 +206,7 @@ async def _scrape_greenhouse(client, company, titles, locations, levels):
             "url": job["absolute_url"],
             "source": f"greenhouse:{company}",
             "description": _strip_html(job.get("content", ""))[:2000],
-            "posted_at": posted_at,
+            "posted_at": _parse_iso(job.get("updated_at")),
         })
     return results
 
@@ -190,7 +259,6 @@ async def _scrape_ashby(client, company, titles, locations, levels):
         loc = job.get("locationName", "") or ""
         if not _matches_criteria(job.get("title", ""), loc, titles, locations, levels):
             continue
-        posted_at = _parse_iso(job.get("publishedDate"))
         results.append({
             "company_job_id": job["id"],
             "company_name": data.get("organizationName", company.title()),
@@ -200,8 +268,130 @@ async def _scrape_ashby(client, company, titles, locations, levels):
             "url": job["jobUrl"],
             "source": f"ashby:{company}",
             "description": _strip_html(job.get("descriptionHtml", ""))[:2000],
-            "posted_at": posted_at,
+            "posted_at": _parse_iso(job.get("publishedDate")),
         })
+    return results
+
+
+async def _scrape_workday(client, tenant, display_name, board, titles, locations, levels):
+    url = f"https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{board}/jobs"
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+    }
+    # Search for each title combination
+    results = []
+    seen = set()
+    for title_kw in (titles or [""]):
+        body = {"limit": 20, "offset": 0, "searchText": title_kw}
+        try:
+            resp = await client.post(url, json=body, headers=headers)
+            if resp.status_code in (404, 403, 422):
+                return []
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception:
+            return []
+
+        for job in data.get("jobPostings", []):
+            job_id = job.get("bulletFields", [None])[0] or job.get("externalPath", "")
+            if job_id in seen:
+                continue
+            seen.add(job_id)
+
+            title = job.get("title", "")
+            loc = job.get("locationsText", "")
+            if not _matches_criteria(title, loc, titles, locations, levels):
+                continue
+
+            path = job.get("externalPath", "")
+            job_url = f"https://{tenant}.wd5.myworkdayjobs.com{path}" if path.startswith("/") else path
+            posted_at = _parse_iso(job.get("postedOn"))
+
+            results.append({
+                "company_job_id": path.split("/")[-1] if path else job_id,
+                "company_name": display_name,
+                "job_title": title,
+                "location": loc or None,
+                "level": _infer_level(title),
+                "url": job_url,
+                "source": f"workday:{tenant}",
+                "description": None,
+                "posted_at": posted_at,
+            })
+    return results
+
+
+async def _scrape_linkedin(client, titles: list[str], locations: list[str], levels: list[str]) -> list[dict]:
+    """Use LinkedIn's guest job search API (no auth needed, public embed endpoint)."""
+    results = []
+    seen = set()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.linkedin.com/",
+    }
+
+    # Map our location names to LinkedIn geo URNs for Bay Area
+    location_param = "San Francisco Bay Area" if locations else ""
+
+    for title_kw in (titles or []):
+        url = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+        params = {
+            "keywords": title_kw,
+            "location": location_param,
+            "start": "0",
+            "f_TPR": "r604800",  # past week
+        }
+        try:
+            resp = await client.get(url, params=params, headers=headers)
+            if resp.status_code != 200:
+                continue
+        except Exception:
+            continue
+
+        soup = BeautifulSoup(resp.text, "lxml")
+        for card in soup.select("li"):
+            link_el = card.select_one("a.base-card__full-link, a[href*='/jobs/view/']")
+            if not link_el:
+                continue
+            job_url = link_el.get("href", "").split("?")[0]
+            if not job_url or job_url in seen:
+                continue
+            seen.add(job_url)
+
+            title_el = card.select_one(".base-search-card__title, h3")
+            company_el = card.select_one(".base-search-card__subtitle, h4")
+            loc_el = card.select_one(".job-search-card__location")
+            time_el = card.select_one("time")
+
+            title = title_el.get_text(strip=True) if title_el else ""
+            company = company_el.get_text(strip=True) if company_el else "Unknown"
+            loc = loc_el.get_text(strip=True) if loc_el else ""
+
+            if not title or not _matches_criteria(title, loc, titles, locations, levels):
+                continue
+
+            posted_at = None
+            if time_el and time_el.get("datetime"):
+                posted_at = _parse_iso(time_el["datetime"])
+
+            job_id_match = re.search(r"/jobs/view/(\d+)", job_url)
+            job_id = job_id_match.group(1) if job_id_match else job_url[-20:]
+
+            results.append({
+                "company_job_id": f"li_{job_id}",
+                "company_name": company,
+                "job_title": title,
+                "location": loc or None,
+                "level": _infer_level(title),
+                "url": job_url,
+                "source": "linkedin",
+                "description": None,
+                "posted_at": posted_at,
+            })
+
     return results
 
 
@@ -209,21 +399,16 @@ async def _scrape_ashby(client, company, titles, locations, levels):
 
 def _matches_criteria(title: str, location: str, titles: list[str],
                       locations: list[str], levels: list[str]) -> bool:
-    # Title must match one of the user's target titles
     title_match = not titles or any(t.lower() in title.lower() for t in titles)
     if not title_match:
         return False
 
-    # Location: only match if one of the user's locations appears in the job's location.
-    # "remote" is NOT auto-passed — user must explicitly add "Remote" to their locations.
     location_match = not locations or any(
         loc.lower() in location.lower() for loc in locations
     )
     if not location_match:
         return False
 
-    # Level: if user specified levels, only include jobs whose inferred level
-    # matches. Jobs with NO detectable level pass through (might be unlabeled entry-level).
     if levels:
         inferred = _infer_level(title)
         if inferred is not None:
@@ -232,6 +417,51 @@ def _matches_criteria(title: str, location: str, titles: list[str],
                 return False
 
     return True
+
+
+# ── ATS detection (used when user manually adds a job) ───────────────────────
+
+def detect_ats_from_url(url: str) -> Optional[dict]:
+    """
+    Given a job posting URL, return {'ats_type', 'ats_slug', 'workday_board'} or None.
+    Called when a user manually adds a job so we can learn the company's ATS.
+    """
+    try:
+        from urllib.parse import urlparse
+        p = urlparse(url)
+        host = p.netloc.lower()
+        path = p.path
+
+        if "greenhouse.io" in host:
+            # boards.greenhouse.io/v1/boards/{slug}/... or boards.greenhouse.io/{slug}/jobs/...
+            m = re.search(r"/boards/([^/]+)/", path) or re.search(r"^/([^/]+)/jobs", path)
+            slug = m.group(1) if m else None
+            if slug:
+                return {"ats_type": "greenhouse", "ats_slug": slug, "workday_board": None}
+
+        if "lever.co" in host:
+            m = re.match(r"/([^/]+)/", path)
+            slug = m.group(1) if m else None
+            if slug:
+                return {"ats_type": "lever", "ats_slug": slug, "workday_board": None}
+
+        if "ashbyhq.com" in host:
+            m = re.match(r"/([^/]+)/", path)
+            slug = m.group(1) if m else None
+            if slug:
+                return {"ats_type": "ashby", "ats_slug": slug, "workday_board": None}
+
+        if "myworkdayjobs.com" in host:
+            # host: {tenant}.wd5.myworkdayjobs.com
+            tenant = host.split(".")[0]
+            # path: /wday/cxs/{tenant}/{board}/... or /{board}/job/...
+            parts = [p for p in path.split("/") if p]
+            board = parts[0] if parts else tenant
+            return {"ats_type": "workday", "ats_slug": tenant, "workday_board": board}
+
+    except Exception:
+        pass
+    return None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -246,6 +476,8 @@ def _infer_level(title: str) -> Optional[str]:
         return "Lead"
     if any(w in t for w in ["manager", " em ", "eng manager"]):
         return "Manager"
+    if any(w in t for w in ["director"]):
+        return "Director"
     if any(w in t for w in ["junior", "jr.", "jr ", "associate"]):
         return "Junior"
     if any(w in t for w in ["new grad", "university grad", "entry level", "entry-level", "recent grad"]):

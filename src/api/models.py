@@ -98,6 +98,20 @@ class SearchConfig(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
 
+class TrackedCompany(Base):
+    """Companies the scraper has learned about — seeded by hand or discovered from manual job adds."""
+    __tablename__ = "tracked_companies"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_name = Column(String, nullable=False)
+    ats_type = Column(String, nullable=False)   # greenhouse|lever|ashby|workday
+    ats_slug = Column(String, nullable=False)    # slug used in ATS API URL
+    workday_board = Column(String)               # board path for Workday companies
+    discovered_from = Column(String, nullable=False, default="manual")  # manual|auto
+    added_at = Column(DateTime, default=func.now(), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+
 class DiscordSession(Base):
     __tablename__ = "discord_sessions"
 
