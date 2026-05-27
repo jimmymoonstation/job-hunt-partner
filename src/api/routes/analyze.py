@@ -22,6 +22,7 @@ router = APIRouter(prefix="/analyze", tags=["analyze"])
 
 class AnalyzeRequest(BaseModel):
     url: str
+    page_content: Optional[str] = None  # sent by extension; skips server-side fetch
 
 
 class AnalyzeResult(BaseModel):
@@ -39,10 +40,13 @@ class AnalyzeResult(BaseModel):
 
 @router.post("", response_model=AnalyzeResult)
 async def analyze_job(body: AnalyzeRequest, db: Session = Depends(get_db)):
-    # 1. Fetch the job page
-    job_text = await _fetch_page(body.url)
+    # 1. Use content sent by extension, or fall back to server-side fetch
+    if body.page_content and len(body.page_content.strip()) > 100:
+        job_text = body.page_content[:8000]
+    else:
+        job_text = await _fetch_page(body.url)
     if not job_text:
-        raise HTTPException(status_code=422, detail="Could not fetch the job page. It may require login or block bots.")
+        raise HTTPException(status_code=422, detail="Could not read the job page.")
 
     # 2. Get the most recent resume
     resume = db.query(Resume).order_by(Resume.created_at.desc()).first()

@@ -9,31 +9,45 @@
 <body>
   <div id="app">
 
-    <!-- Header -->
     <header>
       <span class="logo">Job Hunt Partner</span>
       <button id="btn-settings" class="icon-btn" title="Settings">⚙</button>
     </header>
 
-    <!-- Settings panel (hidden by default) -->
     <div id="settings-panel" class="hidden">
       <label>Server URL</label>
       <input id="server-url" type="text" placeholder="http://143.198.134.85" />
       <button id="btn-save-settings" class="btn-primary btn-sm">Save</button>
     </div>
 
-    <!-- Main -->
     <div id="main">
       <div id="url-bar">
         <span id="current-url" class="url-text">Loading current tab…</span>
       </div>
 
-      <button id="btn-analyze" class="btn-primary btn-full">Analyze This Job</button>
+      <!-- Two action buttons -->
+      <div class="btn-row">
+        <button id="btn-analyze" class="btn-primary btn-half">Analyze Job</button>
+        <button id="btn-quick-add" class="btn-secondary btn-half">+ Add to Board</button>
+      </div>
+
+      <!-- Quick-add form -->
+      <div id="quick-add-form" class="hidden">
+        <input id="qa-title" type="text" placeholder="Job title" />
+        <input id="qa-company" type="text" placeholder="Company" />
+        <input id="qa-location" type="text" placeholder="Location (optional)" />
+        <input id="qa-level" type="text" placeholder="Level, e.g. Senior (optional)" />
+        <div class="btn-row" style="margin-top:8px">
+          <button id="qa-confirm" class="btn-primary btn-half">Save to Board</button>
+          <button id="qa-cancel" class="btn-secondary btn-half">Cancel</button>
+        </div>
+        <p id="qa-msg" class="save-msg" style="margin-top:6px"></p>
+      </div>
 
       <!-- Loading -->
       <div id="loading" class="hidden">
         <div class="spinner"></div>
-        <p id="loading-msg">Fetching job page…</p>
+        <p id="loading-msg">Reading page…</p>
       </div>
 
       <!-- Error -->

@@ -114,6 +114,23 @@ header {
 .btn-full { width: 100%; }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
 
+.btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.btn-half { flex: 1; }
+
+#quick-add-form { margin-bottom: 4px; }
+#quick-add-form input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+  margin-bottom: 6px;
+}
+#quick-add-form input:focus { border-color: var(--accent); }
+
 /* Loading */
 #loading {
   text-align: center;

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Job Hunt Partner",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Analyze any job posting instantly — fit score, talking points, cover letter bullets.",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "scripting"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Analyze this job"
