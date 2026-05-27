@@ -23,7 +23,8 @@ def list_applications(
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    query = db.query(Application)
+    # Inner join ensures we only return applications whose job still exists
+    query = db.query(Application).join(Job, Application.job_id == Job.id)
     if status:
         query = query.filter(Application.status == status)
     total = query.count()
