@@ -28,8 +28,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Job Hunt Partner",
-    version="1.0.0",
+    title="Duck Hunt 🦆🍔",
+    version="2.0.0",
     lifespan=lifespan,
 )
 

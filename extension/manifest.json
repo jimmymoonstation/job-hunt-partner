@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Job Hunt Partner",
-  "version": "1.2",
-  "description": "Analyze any job posting instantly — fit score, talking points, cover letter bullets.",
+  "name": "Duck Hunt",
+  "version": "1.3",
+  "description": "Quack! Analyze any job posting instantly — fit score, cover letter bullets, and add it to your pond.",
   "permissions": ["activeTab", "storage", "scripting"],
   "icons": {
     "16":  "icon16.png",

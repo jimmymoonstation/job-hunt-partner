@@ -3,32 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Job Hunt Partner</title>
+  <title>Duck Hunt 🦆🍔</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <div class="header-inner">
-      <img src="duck-burger-96.png" alt="Duck Burger mascot" class="mascot" />
-      <div>
-        <h1>Job Hunt Partner</h1>
-        <div id="countdown"></div>
+      <div class="header-left">
+        <span class="mascot-emoji">🦆🍔</span>
+        <div class="header-titles">
+          <h1>Duck Hunt</h1>
+          <div class="tagline">hunting the perfect job, one pond at a time</div>
+        </div>
       </div>
+      <div id="countdown"></div>
     </div>
   </header>
 
   <nav>
-    <button class="tab active" data-tab="board">Job Board</button>
-    <button class="tab" data-tab="tracker">My Applications</button>
-    <button class="tab" data-tab="config">Search Config</button>
-    <button class="tab" data-tab="resumes">Resumes</button>
+    <button class="tab active" data-tab="board">🎯 The Pond</button>
+    <button class="tab" data-tab="tracker">📋 My Shots</button>
+    <button class="tab" data-tab="config">⚙️ Hunt Settings</button>
+    <button class="tab" data-tab="resumes">📄 Resumes</button>
   </nav>
 
   <!-- Stats bar -->
   <section id="stats-bar">
-    <div class="stat"><span id="stat-discovered">—</span><label>Jobs Found</label></div>
-    <div class="stat"><span id="stat-applied">—</span><label>Applied</label></div>
+    <div class="stat"><span id="stat-discovered">—</span><label>Spotted</label></div>
+    <div class="stat"><span id="stat-applied">—</span><label>Shot At</label></div>
     <div class="stat"><span id="stat-screening">—</span><label>Screening</label></div>
     <div class="stat"><span id="stat-interview">—</span><label>Interview</label></div>
     <div class="stat"><span id="stat-offer">—</span><label>Offers</label></div>
@@ -41,8 +44,8 @@
       <input id="search-q" type="text" placeholder="Search title or company…" />
       <input id="search-loc" type="text" placeholder="Location…" />
       <button id="btn-refresh" class="btn-primary">Refresh</button>
-      <button id="btn-add-job" class="btn-secondary">+ Add Job Manually</button>
-      <button id="btn-scrape" class="btn-secondary">Run Scraper Now</button>
+      <button id="btn-add-job" class="btn-secondary">+ Add Manually</button>
+      <button id="btn-scrape" class="btn-secondary">🔍 Hunt Now</button>
       <span id="scraper-status"></span>
       <span id="last-searched"></span>
     </div>
@@ -92,32 +95,33 @@
         </tr>
       </thead>
       <tbody id="apps-body">
-        <tr><td colspan="7" class="loading">Loading…</td></tr>
+        <tr><td colspan="7" class="loading">No shots fired yet. Start applying from The Pond.</td></tr>
       </tbody>
     </table>
   </section>
 
-  <!-- Search Config -->
+  <!-- Hunt Settings -->
   <section id="tab-config" class="tab-content">
     <div class="config-form">
-      <h2>Search Preferences</h2>
-      <p>Separate multiple values with commas.</p>
-      <label>Job Titles <small>(e.g. Software Engineer, Backend Engineer)</small></label>
-      <input id="cfg-titles" type="text" placeholder="Software Engineer, Backend Engineer" />
+      <h2>Hunt Settings</h2>
+      <p>Tell Duck Hunt what to look for. Separate multiple values with commas.</p>
+
+      <label>Job Titles <small>(e.g. Data Engineer, Analytics Engineer)</small></label>
+      <input id="cfg-titles" type="text" placeholder="Data Engineer, Analytics Engineer" />
 
       <label>Locations <small>(e.g. San Francisco, Remote, New York)</small></label>
-      <input id="cfg-locations" type="text" placeholder="San Francisco, Remote" />
+      <input id="cfg-locations" type="text" placeholder="San Francisco, San Jose, Remote" />
 
-      <label>Levels <small>(e.g. Senior, Staff, L5)</small></label>
-      <input id="cfg-levels" type="text" placeholder="Senior, Staff" />
+      <label>Levels <small>(e.g. Junior, New Grad, Senior)</small></label>
+      <input id="cfg-levels" type="text" placeholder="Junior, New Grad" />
 
-      <label>Keywords <small>(additional search terms)</small></label>
-      <input id="cfg-keywords" type="text" placeholder="distributed systems, Python" />
+      <label>Keywords <small>(extra search terms)</small></label>
+      <input id="cfg-keywords" type="text" placeholder="dbt, Spark, Airflow" />
 
       <label>Excluded Companies</label>
       <input id="cfg-excluded" type="text" placeholder="Company X, Company Y" />
 
-      <button id="btn-save-config" class="btn-primary">Save & Start Searching</button>
+      <button id="btn-save-config" class="btn-primary">Save & Start Hunting</button>
       <span id="config-msg"></span>
     </div>
   </section>
@@ -132,7 +136,7 @@
         <tr><th>Name</th><th>Version</th><th>Tags</th><th>Created</th><th>Actions</th></tr>
       </thead>
       <tbody id="resumes-body">
-        <tr><td colspan="5" class="loading">Loading…</td></tr>
+        <tr><td colspan="5" class="loading">No resumes yet. Add your first one.</td></tr>
       </tbody>
     </table>
   </section>
@@ -140,37 +144,37 @@
   <!-- Add Job Modal -->
   <div id="add-job-overlay" class="hidden">
     <div id="add-job-modal">
-      <h3>Add Job Manually</h3>
+      <h3>🦆 Add Job Manually</h3>
       <label>Job Title <span style="color:var(--red)">*</span></label>
-      <input id="aj-title" type="text" placeholder="Senior Software Engineer" />
+      <input id="aj-title" type="text" placeholder="Data Engineer" />
       <label>Company <span style="color:var(--red)">*</span></label>
       <input id="aj-company" type="text" placeholder="Acme Corp" />
       <label>Job Posting URL <span style="color:var(--red)">*</span></label>
-      <input id="aj-url" type="url" placeholder="https://careers.acme.com/jobs/12345" />
+      <input id="aj-url" type="url" placeholder="https://careers.example.com/jobs/123" />
       <label>Location</label>
-      <input id="aj-location" type="text" placeholder="San Francisco, CA / Remote" />
+      <input id="aj-location" type="text" placeholder="San Francisco, CA" />
       <label>Level</label>
-      <input id="aj-level" type="text" placeholder="Senior / L5 / Staff" />
-      <label>Notes / Description</label>
-      <textarea id="aj-description" rows="3" placeholder="Anything you want to remember about this role…"></textarea>
+      <input id="aj-level" type="text" placeholder="Junior / New Grad / Senior" />
+      <label>Notes</label>
+      <textarea id="aj-description" rows="3" placeholder="Anything to remember about this role…"></textarea>
       <div class="modal-actions">
-        <button id="aj-confirm" class="btn-primary">Add Job</button>
+        <button id="aj-confirm" class="btn-primary">Add to Pond</button>
         <button id="aj-cancel" class="btn-secondary">Cancel</button>
       </div>
-      <p id="aj-error" style="color:var(--red);font-size:12px;margin-top:8px"></p>
+      <p id="aj-error"></p>
     </div>
   </div>
 
   <!-- Apply Modal -->
   <div id="modal-overlay" class="hidden">
     <div id="modal">
-      <h3 id="modal-title">Apply to Job</h3>
+      <h3 id="modal-title">🎯 Log Application</h3>
       <label>Resume version</label>
       <select id="modal-resume"></select>
       <label>Notes</label>
-      <textarea id="modal-notes" rows="3" placeholder="Where did you find it? Any contacts?"></textarea>
+      <textarea id="modal-notes" rows="3" placeholder="How did you find it? Any contacts inside?"></textarea>
       <div class="modal-actions">
-        <button id="modal-confirm" class="btn-primary">Confirm Apply</button>
+        <button id="modal-confirm" class="btn-primary">Mark as Applied</button>
         <button id="modal-cancel" class="btn-secondary">Cancel</button>
       </div>
     </div>
@@ -184,11 +188,11 @@
         <option value="applied">Applied</option>
         <option value="phone_screen">Phone Screen</option>
         <option value="interview">Interview</option>
-        <option value="offer">Offer</option>
+        <option value="offer">Offer 🎉</option>
         <option value="rejected">Rejected</option>
         <option value="withdrawn">Withdrawn</option>
       </select>
-      <label>Notes</label>
+      <label>Note</label>
       <input id="status-modal-notes" type="text" placeholder="Optional note…" />
       <div class="modal-actions">
         <button id="status-modal-confirm" class="btn-primary">Update</button>
