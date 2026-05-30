@@ -30,7 +30,7 @@ async def search_jobs(titles: list[str], locations: list[str], keywords: list[st
     results = []
     queries = _build_queries(titles, locations, keywords or [])
 
-    async with httpx.AsyncClient(timeout=15) as client:
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         for query in queries[:5]:  # cap at 5 queries per run to manage quota
             try:
                 resp = await client.get(

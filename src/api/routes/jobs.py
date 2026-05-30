@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,23 @@ def list_jobs(
     if status == "new":
         applied_job_ids = db.query(Application.job_id)
         query = query.filter(Job.id.notin_(applied_job_ids))
+
+        # Also exclude jobs that share (company, title) with an already-applied job —
+        # catches cross-source duplicates that slipped past the URL uniqueness check
+        from sqlalchemy import func, tuple_
+        applied_co_title = (
+            db.query(func.lower(func.trim(Job.company_name)), func.lower(func.trim(Job.job_title)))
+            .join(Application, Application.job_id == Job.id)
+            .distinct()
+            .all()
+        )
+        if applied_co_title:
+            query = query.filter(
+                ~tuple_(
+                    func.lower(func.trim(Job.company_name)),
+                    func.lower(func.trim(Job.job_title)),
+                ).in_(applied_co_title)
+            )
     elif status == "applied":
         applied_job_ids = db.query(Application.job_id)
         query = query.filter(Job.id.in_(applied_job_ids))
@@ -79,6 +97,30 @@ def list_jobs(
     jobs = query.order_by(order).offset(offset).limit(limit).all()
 
     return JobListOut(total=total, jobs=jobs)
+
+
+class FeedbackBody(BaseModel):
+    feedback: str  # free-text reason; client may prepend quick-tag chips
+
+
+@router.post("/{job_id}/feedback", response_model=JobOut)
+def submit_feedback(job_id: int, body: FeedbackBody, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job.user_feedback = body.feedback.strip()
+    job.feedback_at = datetime.utcnow()
+    job.is_active = False   # hide from main feed after feedback
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+@router.get("/career-sites")
+def get_career_sites():
+    """Return confirmed company name → career homepage URL mapping for the dashboard."""
+    from src.scraper.career_pages import CONFIRMED_CAREER_SITES
+    return CONFIRMED_CAREER_SITES
 
 
 @router.get("/{job_id}", response_model=JobOut)
@@ -109,9 +151,16 @@ def create_job(body: JobCreate, db: Session = Depends(get_db)):
         discovered_at=datetime.utcnow(),
         is_active=True,
     )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
+    try:
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+    except IntegrityError:
+        db.rollback()
+        existing = db.query(Job).filter(Job.url == body.url).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="A job with this URL already exists")
+        raise HTTPException(status_code=409, detail="Job already exists")
 
     # Learn the company's career site from whichever URL reveals more (prefer original_url)
     learn_url = body.original_url or body.url
@@ -168,7 +217,9 @@ def _maybe_register_company(db: Session, company_name: str, url: str):
             host = parsed.netloc.lower().lstrip("www.")
             # Skip generic job boards — we only want company-owned career sites
             skip_hosts = {"linkedin.com", "indeed.com", "glassdoor.com", "ziprecruiter.com",
-                          "monster.com", "dice.com", "simplyhired.com", "wellfound.com"}
+                          "monster.com", "dice.com", "simplyhired.com", "wellfound.com",
+                          "jobright.ai", "builtinsf.com", "builtin.com", "careerbuilder.com",
+                          "talent.com", "adzuna.com", "getwork.com", "zippia.com"}
             if any(s in host for s in skip_hosts):
                 return
             career_base = f"{parsed.scheme}://{parsed.netloc}"

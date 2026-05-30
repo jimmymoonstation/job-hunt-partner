@@ -20,6 +20,8 @@ class JobOut(BaseModel):
     posted_at: Optional[datetime]
     discovered_at: datetime
     is_active: bool
+    user_feedback: Optional[str]
+    feedback_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
 

@@ -23,6 +23,8 @@ class Job(Base):
     posted_at = Column(DateTime)
     discovered_at = Column(DateTime, default=func.now(), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    user_feedback = Column(Text)
+    feedback_at = Column(DateTime)
 
     applications = relationship("Application", back_populates="job")
 
@@ -100,16 +102,17 @@ class SearchConfig(Base):
 
 
 class TrackedCompany(Base):
-    """Companies the scraper has learned about — seeded by hand or discovered from manual job adds."""
+    """Master list of companies the scraper targets. Fully manageable from the dashboard."""
     __tablename__ = "tracked_companies"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     company_name = Column(String, nullable=False)
-    ats_type = Column(String, nullable=False)   # greenhouse|lever|ashby|workday|google|custom
-    ats_slug = Column(String, nullable=False)    # slug or domain key
-    workday_board = Column(String)               # board path for Workday companies
-    career_url = Column(String)                  # base career site URL for custom/unknown ATS
-    discovered_from = Column(String, nullable=False, default="manual")  # manual|auto
+    ats_type = Column(String, nullable=False)        # greenhouse|lever|ashby|workday|smartrecruiters|amazon|custom
+    ats_slug = Column(String, nullable=False)         # slug, tenant name, or domain key
+    workday_board = Column(String)                    # board path for Workday companies
+    workday_wd_ver = Column(String, default="wd5")    # Workday data-center version (wd1/wd5/wd12)
+    career_url = Column(String)                       # canonical career homepage URL
+    discovered_from = Column(String, nullable=False, default="manual")  # manual|seed|auto
     added_at = Column(DateTime, default=func.now(), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
